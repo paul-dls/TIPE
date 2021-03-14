@@ -1,0 +1,15 @@
+1 - Installez la librairie I2Cdev
+
+2 - Téléversez le "Programme_Arduino"
+
+3 - Installez Processing (c'est gratuit)
+    https://processing.org/download/?processing
+
+4 - Ouvrez le "Programme_Processing"
+
+5 - Dans la boucle setup() éditez votre port COM auquel votre carte Arduino est connectée.    
+
+6 - Cliquez sur Run
+
+
+

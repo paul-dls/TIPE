@@ -1,0 +1,21 @@
+1 - Installez la librairie I2Cdev
+
+2 - Téléversez le "Programme_Arduino"
+
+3 - Installez Processing (c'est gratuit)
+    https://processing.org/download/?processing
+
+4 - Téléchargez toxiclibs-complete-0020.zip et extraire le contenu dans
+    https://bitbucket.org/postspectacular/toxiclibs/downloads/
+
+5 - Extraire le contenu de toxiclibs-complete-0020.zip dans C:\Users\...\Documents\Processing\libraries
+
+6 - Ouvrez le "Programme_Processing"
+
+7 - Dans la boucle setup() éditez votre port COM auquel votre carte Arduino est connectée.    
+
+8 - Cliquez sur Run
+    (Cela ne fonctionne pas toujours du premier coup, si c'est le cas cliquez sur stop puis run à nouveau)
+
+
+
