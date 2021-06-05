@@ -1,0 +1,16 @@
+﻿"diametreVolant"= 100mm
+"margeRotation"= 10mm
+"epaisseurPlastique"= 10mm
+"diametreVis"= 3.5mm
+"ecartementVisMoteur"= 19.5mm
+"diametreAxeMoteur"= 5mm
+"longueureAxeMoteur"= 14mm
+"hauteurMoteur"= 17.5mm
+"nombreVisMoteur"= 4
+"diametreMoeteur"= 28mm
+"diametreRoulement"= 10mm
+"hauteur1" = "hauteurMoteur" - "ecartTrou1Servo"
+"ecartTrou1Servo"= 10mm
+"epasseurVolant"= 10mm
+"alongementServo" = 12.5mm
+"longeurSupport"= "diametreVolant" + 2 * "margeRotation" + "epaisseurPlastique" * 2 + "alongementServo" * 2

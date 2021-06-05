@@ -1,8 +1,0 @@
-1 - Installez la librairie I2Cdev
-
-2 - Téléversez le "Programme_Arduino"
-
-3 - Ouvrez le moniteur série configuré à 115200 baud
-
-
-

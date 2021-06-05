@@ -1,169 +1,140 @@
 /*
+ * Ce programme permet de controler l'orientation d'un solide sur un pivot vertical à partir d'un volant d'inertie 
+ *  
+ * le pas à pas est sur les pins 8 a 11
  * 
- * 
- * 
- * 
- * 
- * 
- * 
- * le est stepper sur les pins 8 a 11
- * 
- * ce programme reprend des parties des exemples des librairies autoPID, Stepper
+ * ce programme reprend des parties des exemples de la librairie Stepper
  * 
  * créé le 6 mars 2021
  * par Paul de La Sayette
- * 
  */
 //librairies
 #include <Servo.h>
 #include <Stepper.h>
-#include <AutoPID.h>
 
 // pins
 #define POT_PIN A0
-#define LED_PIN 13
 #define pinMot 6
 
-// constantes du correcteur
+//constantes
 #define pi 3.1416
 #define stepsPerRevolution 200
-#define OUTPUT_MIN -double(50)/60*2*pi
-#define OUTPUT_MAX double(50)/60*2*pi
-#define KP 2
-#define KI 0
-#define KD 0.5
-#define periode 1000
-
 #define processingOn true
+#define tempsRafraichissement 100 //en ms
+
+// constantes du correcteur
+#define K 1.1
+#define Td 45 //en ms
+#define a 25
 
 // variables golbales
-double mesure; // de 0 a 1023, (la librairie utilisé ne fonctionne qu'avec des doubles)
-double mesureOld = 0;
-long int tempsOld = millis();
-double deriv = 0;
+float mesure; // en radian
+float mesureOld = 0;// en radian
+long int tempsOld = millis();//en ms
+float deriv = 0; //en rad/s
+long int derniereCom= millis();//en ms
 
-double commande = 0; // de 0 a 1023
-double output; // de 0 a 1023
-
-String inputString = "";         // a String to hold incoming data
-bool stringComplete = false;  // whether the string is complete
+float commande = 0; // en radian
+float output; // en rad/s
+int  motorSpeed=0;// en rpm
 
 //objets
 Servo moteur;
-//AutoPID myPID(&mesure, &commande, &output, OUTPUT_MIN, OUTPUT_MAX, KP, KI, KD);
 Stepper myStepper(stepsPerRevolution, 8, 9, 10, 11);
 
 
-
 void setup() {
-  Serial.begin(115200);
-  inputString.reserve(200);
-  //while (!Serial) {
-  //  ; // wait for serial port to connect. Needed for native USB port only
-  //}
+  Serial.begin(115200); // on définit un débit rapide pour ne pas ralentir l'arduino inutilement
+  //while (!Serial) {}
   Serial.println("initialisation du port série");
   
   moteur.attach(pinMot,100,200);
   myStepper.setSpeed(10);
-  //myPID.setTimeStep(periode);
-  pinMode(LED_PIN, OUTPUT);
   delay(500);
 
   //initialisation du moteur
-  moteur.write(120); // on place l'ESC a 0 pour enlever la securité, j'utilise un esc de voiture télécommandé, son 0 n'est donc en réalité à 100
-  for(int i=120; i<140 ; i++){
+  moteur.write(125); 
+  // on place l'ESC a 0 pour enlever la securité, j'utilise un esc de voiture télécommandé
+  //son 0 n'est donc en réalité pas à 100 (borne basse du PWM) mais à 120
+  for(int i=125; i<140 ; i++){ 
+    // 120 correspond donc à 25% de la vitesse maximale, on est donc environ à 2500 tr/min(vérifié au stroboscope)
     moteur.write(i);
     Serial.println(i);
-    delay(70);
+    delay(50);
   }
-  delay(1000);
+  delay(500);
   Serial.println("moteur lancé");
-  //myPID.setBangBang(3);
 
-  commande = double(analogRead(POT_PIN))/1023*2*pi;
+  commande = float(analogRead(POT_PIN))/1023*2*pi;
   Serial.println("commande :" + String(commande));
 }
 
 void loop() {
+  //calcul de motorSpeed par un correcteur PD/avance de phase
+  mesure = float(analogRead(POT_PIN))/1023*2*pi;
+  deriv = ((mesure - mesureOld)/(millis()-tempsOld)+deriv)/2;// on fait une moyenne glissante sur 2 points
+
+  //stockage des anciennes mesures
+  mesureOld = mesure;
+  tempsOld = millis(); 
   
-  //on attend un peu
+  output = K *((mesure-commande) + Td*a*deriv);
+  motorSpeed = output/(2*pi)*60;//output est en radian par seconde, motorspeed en rpm
+  setMotorSpeed();
 
-  double mesure = double(analogRead(POT_PIN))/1023*2*pi;
-
-
-  //myPID.run();
-
- 
-   
-    //Serial.print ("intégrale:" +String(myPID.getIntegral())+ ", ");
-  
-    
-  
-    //digitalWrite(LED_PIN, myPID.atSetPoint(0.1));
-    deriv = 1000*(mesure - mesureOld)/(millis()-tempsOld);
-    output = KP * (mesure-commande) + KD * deriv;
-
-    mesureOld = mesure;
-    tempsOld = millis();
-    
-    //Serial.print ("output:" +String(output) + ", ");
-  
-
-
-  //output est en radian par seconde, motorspeed en rpm
-  //double motorSpeed = map(output, 0, 2*pi, 0, 60);
-  int motorSpeed = output/(2*pi)*60;
-  if (motorSpeed > 0) {
-    // on met a jour la vitesse:
-    myStepper.setSpeed(motorSpeed+5);
-    // step 1/100 of a revolution:
-    myStepper.step(stepsPerRevolution / 200);
+  //on impose une durée de boucle minimum ce qui filtre les hautes fréquences
+  while(millis()-tempsOld < Td){
+    delay(1);
   }
-  else if (motorSpeed < 0) {
-    // on met a jour la vitesse:
-    myStepper.setSpeed(- motorSpeed+5);
-    // step 1/100 of a revolution:
-    myStepper.step(- stepsPerRevolution / 200);
+
+  //on communique avec l'ordinateur tout les 100ms 
+  if (millis() - derniereCom >= tempsRafraichissement){
+    com();
+    derniereCom = millis();
   }
+}
+void com(){
+  //communication avec l'ordinateur, j'utilise une synthaxe spaciale lorsque je fais des graphiques avec processing
   if (not processingOn ){
     Serial.print ("temps :" +String(millis()) + ", ");
     Serial.print ("mesure:" +String(mesure) + ", ");
-    Serial.print("deriv:" + String(deriv)+",");
+    Serial.print("deriv:" + String(1000*deriv)+",");
     Serial.print ("commande :" +String(commande) + ", ");
     Serial.print ("output:" +String(output) + ", ");
     Serial.println ("motorSpeed:" +String(motorSpeed) );
   }
   else {
-    
     Serial.print (String(commande) + ",");
     Serial.print (String(mesure)+",");
-    Serial.print (String(deriv)+",");
-    Serial.print (String(output) + ",");
+    Serial.print (String(1000*deriv)+",");
     Serial.print (String(motorSpeed)+ "," );
     Serial.println (String(millis()-tempsOld));
   }
-  while(tempsOld +50> millis()){
-    delay(1);
-  }
-  //serialEvent();
-}
 
-void serialEvent() {
-  while (Serial.available()) {
-    // get the new byte:
-    char inChar = (char)Serial.read();
-    // add it to the inputString:
-    inputString += inChar;
-    // if the incoming character is a newline, set a flag so the main loop can
-    // do something about it:
-    if (inChar == '\n') {
-      stringComplete = true;
+  //l'ordinateur envoie "1" si il souhaite un échelon de 1 rad
+  if (Serial.available() > 0) {
+    if (Serial.read() == 49){ // 1 coorespond à 49 en ASCII
+      commande = commande + 1;
     }
   }
-  //if inputString[0:2]="KD="{
-  //  KD = int(inputString)
-  //}
-  stringComplete = false;
-  inputString="";
-  
+}
+
+void setMotorSpeed(){
+  //on met a jour la vitesse du moteur et on lui fait se déplacer d'un pas
+  if (motorSpeed > 60){//saturation haute
+    myStepper.setSpeed(60);
+    myStepper.step(1);
+  }
+  else if (motorSpeed > 0){//sens positif
+    myStepper.setSpeed(motorSpeed+2);
+    myStepper.step(1);
+  }
+  else if (motorSpeed < -60){//saturation basse
+    myStepper.setSpeed(60);
+    myStepper.step(-1);
+  }
+  else if (motorSpeed < 0) {//sens négatif
+    myStepper.setSpeed(- motorSpeed+2);
+    myStepper.step(-1);
+  }
 }

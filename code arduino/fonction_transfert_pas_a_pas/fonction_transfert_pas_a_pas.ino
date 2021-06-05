@@ -29,22 +29,19 @@ void setup() {
   // initialize the serial port:
   Serial.begin(9600);
   pinMode(13,OUTPUT);
-  digitalWrite(13,LOW);
-  delay(2000);
 
+  delay(2000);
+  digitalWrite(13,HIGH);
+  delay(500);
+  digitalWrite(13,LOW);
+  myStepper.step(50);
+  delay(4000);
   
 }
 
 void loop() {
   // step one revolution  in one direction:
-
-  digitalWrite(13,HIGH);
-  Serial.println("clockwise");
-  myStepper.step(5);
-  delay(1000);
-
-  digitalWrite(13,LOW);
-  delay(500);
+  delay(100);
 
 
   
